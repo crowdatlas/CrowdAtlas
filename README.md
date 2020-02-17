@@ -31,13 +31,12 @@ We obtain the transition probabilities from the trained neural network model, an
 
 For performance comparison, we implement the MA (Moving Average) approach as a baseline. The parameters are the same as above, and thus the command format is `python3 MA_estimation.py [hour of start time] [duration in hours] [testing_date]`.
 
-This file estimates the passenger numbers arriving at each station by aggregating passenger numbers starting from all stations. The output file is like *arv_comp/[date]/[station]_arv_comp.csv*. There are three parameters when running it, including *hour of start time*, *duration in hour*, and *date*. Then the command format should be `python3 record_arv_comp.py [hour of start time] [duration in hour] [date]`.
-
 #### 6. get_travel_time.py
 
 To acquire the travel time between any two stations, this process is implemented to crawl the ***TransitLink E-Guide*** web page and generate a file including travel time among all stations ***travel_time.csv***. Meanwhile, it also extracts all the interchange stations and lists them in another file ***inter_stations.csv***. The two files are necessary in all above processes and are both available here.
 
 **Note**: the above steps (**1**, **2**, and **4**) should be executed by sequence.
+
 
 ### Output Results
 
