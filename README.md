@@ -27,9 +27,9 @@ Before training, a data inference process is invoked to transform each raw ride 
 
 We obtain the transition probabilities from the trained neural network model, and thus estimate the passenger number at each station by aggregating the passengers transitioned from all origin stations and from all past time beings. There are three parameters here, namely *hour of start time*, *duration in hours* and *testing date*. The command format is `python3 crowd_estimation.py [hour of start time] [duration in hours] [testing_date]`.
 
-#### 5. MA_estimation.py
+#### 5. [MA/Lasso/LR]_estimation.py
 
-For performance comparison, we implement the MA (Moving Average) approach as a baseline. The parameters are the same as above, and thus the command format is `python3 MA_estimation.py [hour of start time] [duration in hours] [testing_date]`.
+For performance comparison, we implement three alternatives, including MA (Moving Average), Lasso, and LR (Logistic Regression) based approaches) as baselines. The parameters are the same as above, and thus the command format is `python3 [MA/Lasso/LR]_estimation.py [hour of start time] [duration in hours] [testing_date]`.
 
 #### 6. get_travel_time.py
 
@@ -40,4 +40,4 @@ To acquire the travel time between any two stations, this process is implemented
 
 ### Output Results
 
-After executing the above estimation process for a testing date, we can obtain a group of output files that respectively record the estimated and ground-truth passenger numbers at 52 stations in EW and NS lines during the MRT service hours (***[station_name]_num_comp.csv***). We then merge all these output files into one, which records passenger numbers of all the stations of every 5 minutes in the service hours. The files ***merged_num_comp_[1 or 2].csv*** shows the sample results of two typical testing days respectively. In addition, MAPEs of the above estimations for all stations (as well as their regions) during each hour are specifically recorded in the two files ***MAPE_across_time_station_[1 or 2].csv***.
+After executing the above estimation process for a testing date, we can obtain a group of output files that respectively record the estimated and ground-truth passenger numbers at 52 stations in EW and NS lines during the MRT service hours (***[station_name]_num_comp.csv***). We then merge all these output files into one, which records passenger numbers of all the stations of every 5 minutes in the service hours. The files ***merged_num_comp.csv*** shows the sample results of a typical testing day. In addition, MAPEs of the above estimations for all stations (as well as their regions) during each hour are specifically recorded in a file ***MAPE_across_time_station.csv***.
