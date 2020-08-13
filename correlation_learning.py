@@ -5,7 +5,7 @@ import pandas as pd
 import time
 import sys
 import datetime
-from data_inference import data_inference
+from crowdatlas import data_inference
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 np.set_printoptions(threshold=np.inf)
@@ -142,7 +142,7 @@ if __name__ == '__main__':
         for m in range(training_times):
             for epoch in range(n_epochs):
                 for batch in stn_division_index:
-                    batch_xs, batch_ys = data_inference(dates[epoch], station_list[batch], hour)
+                    batch_xs, batch_ys = data_inference.data_inference(dates[epoch], station_list[batch], hour)
                     sess.run(train_op, feed_dict={xs: batch_xs, ys: batch_ys, keep_prob:1.0})
 
         end = time.time()

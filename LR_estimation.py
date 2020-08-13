@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import sys
 import datetime
+from sklearn import linear_model
 sys.path.append('./')
 import data_inference
 
@@ -58,9 +59,11 @@ station_groups = [['EW1', 'EW8', 'EW15', 'EW22'], ['EW2', 'EW9', 'EW16', 'EW23']
     ['NS5', 'NS13', 'NS19', 'NS27'], ['NS7', 'NS14', 'NS20', 'NS28'], ['NS8', 'NS15', 'NS21', 'EW29']]
 
 
-def MA_approach(date, station, hour):
+def LR_approach(date, station, hour):
     dates_ori = pd.bdate_range(end=date, periods=60)
-    ref_dates = [datetime.datetime.strftime(dates_ori[i], '%Y-%m-%d') for i in range(len(dates_ori)-1)]
+    dates = [datetime.datetime.strftime(dates_ori[i], '%Y-%m-%d') for i in range(len(dates_ori) - 1)]
+
+    c_value = 10
     n_classes = 52
     column_name_list1 = []
     column_name_list1.append('start_time')
@@ -69,39 +72,45 @@ def MA_approach(date, station, hour):
     for q in range(0, 52):
         column_name_list1.append('p_' + station_list[q])
 
-    df_record = pd.DataFrame(columns=column_name_list1)
-    record_num = 0
-    lookup_table = [[[0.0 for i in range(52)] for j in range(80)] for k in range(60)]
-    for d in ref_dates:
-        xs, ys = data_inference.data_inference(d, station, hour)
+    contain = [False for q in range(52)]
+    x_train, y_temp = data_inference.data_inference(dates[0], station, hour)
+    y_train = []
+    for i in range(len(y_temp)):
+        for j in range(n_classes):
+            if y_temp[i][j] == 1:
+                y_train.append(j)
+                if contain[j] is False:
+                    contain[j] = True
+                break
 
-        for i in range(len(xs)):
-            record = []
-
-            for j in range(0, 60):
-                if xs[i][j] == 1:
-                    record.append(j)
+    for k in range(1, len(dates)): # ref_dates:
+        xs, y_temp = data_inference.data_inference(dates[k], station, hour)
+        # ys = [0 for i in range(len(y_temp))]
+        for i in range(len(y_temp)):
+            for j in range(n_classes):
+                if y_temp[i][j] == 1:
+                    y_train.append(j)
+                    if contain[j] is False:
+                        contain[j] = True
                     break
+        x_train = np.vstack((x_train, xs))
+        # y_train = np.vstack((y_train, ys))
 
-            for j in range(60, 140):
-                if xs[i][j] == 1:
-                    record.append(j - 60)
-                    break
+    sup_num = 0
+    for q in range(len(contain)):
+        if contain[q] is False:
+            y_train.append(q)
+            sup_num += 1
 
-            record.append(1.)
-            for p in range(n_classes):
-                record.append(ys[i][p])
+    if sup_num > 0:
+        xs = np.zeros((sup_num, 192))
+        x_train = np.vstack((x_train, xs))
+    y_train = np.array(y_train)
 
-            df_record.loc[record_num] = record
-            record_num += 1
-
-    df_lookup = df_record.groupby(by=['start_time', 'delta_time']).sum().reset_index()
-    for i in range(0, df_lookup.shape[0]):
-        for j in range(0, 52):
-            start_time = int(df_lookup.iloc[i, 0])
-            delta_time = int(df_lookup.iloc[i, 1])
-
-            lookup_table[start_time][delta_time][j] = float(df_lookup.iloc[i, j + 3] / df_lookup.iloc[i, 2])
+    clf = linear_model.LogisticRegression(multi_class="multinomial", penalty='l1', solver="saga", C=c_value, max_iter=200)
+    clf.fit(x_train, y_train)
+    print('Training finished~' + station)
+    # print(clf.coef_)
 
     column_name_list = []
     column_name_list.append('origin_station')
@@ -117,7 +126,13 @@ def MA_approach(date, station, hour):
     df_record = pd.DataFrame(columns=column_name_list)
     record_num = 0
 
-    xs_test, ys_test = data_inference.data_inference(date, station, hour)
+    xs_test, ys_test = data_inference.data_inference(date, station, hour, True)
+    # pred_res_list = clf.predict(xs_test)
+    pred_res_list = clf.predict_proba(xs_test)
+
+    # print("Test: " + str(len(pred_res_list)))
+
+
     for i in range(len(xs_test)):
         record = []
         sta_time = 0
@@ -141,7 +156,7 @@ def MA_approach(date, station, hour):
         record.append(0.)
         record.append(0.)
         for p in range(n_classes):
-            record.append(0.)
+            record.append(pred_res_list[i][p])
         for p in range(n_classes):
             record.append(float(ys_test[i][p]))
 
@@ -157,7 +172,7 @@ def MA_approach(date, station, hour):
         pred_dist = [0.] * 52
         ys_dist = [0.] * 52
         for j in range(52):
-            df_group.iloc[i, j + 6] = df_group.iloc[i, 3] * lookup_table[start_time][delta_time][j]
+            # df_group.iloc[i, j + 6] = df_group.iloc[i, 3] * lookup_table[start_time][delta_time][j]
 
             ratio = float(df_group.iloc[i, j + 6] / df_group.iloc[i, 3])
             if ratio <= 0:
@@ -182,8 +197,9 @@ def MA_approach(date, station, hour):
         os.mkdir('sta_results/' + date)
     if not os.path.exists(dir):
         os.mkdir(dir)
-    df_record_opt.to_csv(dir + '/' + station + '_num_dist_ma.csv', index=None)
+    df_record_opt.to_csv(dir + '/' + station + '_num_dist_lr.csv', index=None)
 
+    print('Testing finished~' + station)
     print('Relative entropy:', np.mean(df_record_opt['rel_entropy']))
     print('RMSE:', np.mean(df_record_opt['error']))
 
@@ -199,13 +215,13 @@ if __name__ == '__main__':
 
     for q in range(52):
         for h in range(start_hour, start_hour + duration):
-            MA_approach(date, station_list[q], h)
+            LR_approach(date, station_list[q], h)
 
     dir = 'arv_results'
     if not os.path.exists(dir):
         os.mkdir(dir)
 
-    column_list = ['Station'] + [str(p) for p in range(start_hour, start_hour + duration)]
+    column_list = ['Station'] + [str(p) for p in range(start_hour*2, (start_hour + duration)*2)]
     df_mape = pd.DataFrame(columns=column_list)
 
     for k in range(52):
@@ -213,13 +229,14 @@ if __name__ == '__main__':
         yt_list = [0.0 for i in range(duration*12)]
 
         for q in range(0,52):
-            df = pd.read_csv('sta_results/' + date + '/' + str(start_hour -1) + '/' + station_list[q] + '_num_dist_ma.csv')
-            for h in range(start_hour, start_hour + duration):
-                df_temp = pd.read_csv('sta_results/' + date + '/' + str(h) + '/' + station_list[q] + '_num_dist_ma.csv')
+            df = pd.read_csv('sta_results/' + date + '/' + str(start_hour) + '/' + station_list[q] + '_num_dist_lr.csv')
+            for h in range(start_hour + 1, start_hour + duration):
+                # Lasso_approach(date,station_list[q],h,alpha)
+                df_temp = pd.read_csv('sta_results/' + date + '/' + str(h) + '/' + station_list[q] + '_num_dist_lr.csv')
                 df = df.append(df_temp, ignore_index=True)
             df_opt = df[(df['end_time'] >= start_hour * 60) & (df['end_time'] <= (start_hour + duration) * 60)]
             df_group = df_opt.groupby(by=['end_time']).sum().reset_index()
-            print(df_group.shape[0])
+            # print(df_group.shape[0])
 
             for i in range(0,df_group.shape[0]):
                 index = int((df_group.iloc[i, 0] - 1 - start_hour * 60)/5)
@@ -232,7 +249,7 @@ if __name__ == '__main__':
 
         df_record = pd.DataFrame(columns=['Time', 'Ground_Truth', 'Estimation', 'Deviation', 'Accuracy'])
         record_num = 0
-        mape_list = [0.0 for u in range(duration)]
+        mape_list = [0.0 for u in range(duration * 2)]
 
         for j in range(len(yp_list)):
             accuracy = 1 - float(abs(yp_list[j] - yt_list[j]) / yt_list[j])
@@ -243,16 +260,16 @@ if __name__ == '__main__':
             record_num += 1
             mape_list[int(j/12)] += abs(yp_list[j] - yt_list[j]) / yt_list[j]
 
-        for u in range(duration):
+        for u in range(duration ):
             mape_list[u] *= 100/12
         rec = [station_list[k]] + [str(u) for u in mape_list]
         df_mape.loc[k] = rec
 
         if not os.path.exists(dir + '/' + date):
             os.mkdir(dir + '/' + date)
-        df_record.to_csv(dir + '/' + date + '/' + station_list[k] + '_num_comp_ma.csv', index=None)
+        df_record.to_csv(dir + '/' + date + '/' + station_list[k] + '_num_comp_lr.csv', index=None)
 
-    df_mape.to_csv(dir + '/' + date + '/MAPE_across_time_station_ma.csv', index=None)
+    df_mape.to_csv(dir + '/' + date + '/MAPE_across_time_station_lr.csv', index=None)
 
     column_list = ['Time (min)']
     for k in range(len(stations)):
@@ -262,9 +279,9 @@ if __name__ == '__main__':
     for i in range(duration * 12):
         record = [start_hour * 60 + (i + 1) * 5]
         for k in range(0, len(stations)):
-            df = pd.read_csv(dir + '/' + date + '/' + station_list[k] + '_num_comp_ma.csv')
+            df = pd.read_csv(dir + '/' + date + '/' + station_list[k] + '_num_comp_lr.csv')
             record += [int(df.iloc[i, 1]), int(df.iloc[i, 2])]
 
         df_merge.loc[i] = record
 
-    df_merge.to_csv(dir + '/' + date + '/merged_arv_comp_ma.csv', index=None)
+    df_merge.to_csv(dir + '/' + date + '/merged_arv_comp_lr.csv', index=None)

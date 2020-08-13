@@ -5,7 +5,7 @@ import os
 import sys
 import time
 import datetime
-from data_inference import data_inference
+from crowdatlas import data_inference
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 np.set_printoptions(threshold=np.inf)
@@ -102,7 +102,7 @@ def model_testing(test_date, station, hour):
         accuracy_2 = accuracy_n2 + accuracy_p2
         accuracy_3 = tf.reduce_mean(tf.cast(tf.greater_equal(tf.abs(prediction_diff), 3), tf.float32))
 
-        xs_test, ys_test = data_inference(test_date, station, hour)
+        xs_test, ys_test = data_inference.data_inference(test_date, station, hour)
         loss_res = sess.run(loss, feed_dict={keep_prob: 1.0, xs: xs_test, ys: ys_test})
         pred_diff_list = sess.run(prediction_diff, feed_dict={keep_prob: 1.0, xs: xs_test, ys: ys_test})
         pred_res_list = sess.run(prediction, feed_dict={keep_prob: 1.0, xs: xs_test, ys: ys_test})
@@ -158,6 +158,8 @@ def model_testing(test_date, station, hour):
         df_group = df_record.groupby(by=['origin_station', 'start_time', 'end_time']).sum().reset_index()
         for i in range(0, df_group.shape[0]):
             pred_dist = [0.] * 52
+            ys_dist = [0.] * 52
+
             for j in range(0, 52):
                 ratio = float(df_group.iloc[i, j + 6] / df_group.iloc[i, 3])
                 if ratio <= 0:
@@ -165,8 +167,6 @@ def model_testing(test_date, station, hour):
                 else:
                     pred_dist[j] = ratio
 
-            ys_dist = [0.] * 52
-            for j in range(0, 52):
                 ratio2 = float(df_group.iloc[i, j + 58] / df_group.iloc[i, 3])
                 if ratio2 <= 0:
                     ys_dist[j] = 1e-10

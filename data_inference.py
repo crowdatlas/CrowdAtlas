@@ -10,8 +10,8 @@ station_list = ['NS1&EW24', 'NS25&EW13', 'NS26&EW14'] + ['EW'+str(q) for q in ra
                + ['NS'+str(q) for q in range(2,6)] + ['NS'+str(q) for q in range(7,12)] \
                 + ['NS'+str(q) for q in range(13,25)] + ['NS'+str(q) for q in range(27,29)]
 
-df_trans_tvl = pd.read_csv('travel_time.csv', index_col=0)
-df_trans_stn = pd.read_csv('interchange_stations.csv', index_col=0)
+df_trans_tvl = pd.read_csv('EW_NS_trans_travel_time.csv', index_col=0)
+df_trans_stn = pd.read_csv('EW_NS_trans_stations.csv', index_col=0)
 stn_num = 52
 tvl_time_array = [[0 for j in range(stn_num)] for i in range(stn_num)]
 trans_stn_array = [['*' for q in range(stn_num)] for p in range(stn_num)]
@@ -93,19 +93,19 @@ def get_midway_time(line, start_station, end_station, rel_end_time):
     return record_list, gen_rel_end_time
 
 
-def data_inference(date, station, hour):
-    df = pd.read_csv('dataset/' + date + '/' + station + '.csv')
+def data_inference(date, station, hour, isTest=False):
+    df = pd.read_csv('dataset/' + date + '/' + station + '_start.csv')
 
     record_list = []
     for i in range(0, df.shape[0]):
-        cur_start_time = datetime.datetime.strptime(df.iloc[i, 1], '%H:%M:%S')
+        cur_start_time = datetime.datetime.strptime(df.iloc[i, 1], '%Y-%m-%d %H:%M:%S')
         if cur_start_time.hour != hour:
             continue
         if cur_start_time.hour < 5:
             df.iloc[i, 1] = (24 + cur_start_time.hour) * 60 + int(cur_start_time.minute)
         else:
             df.iloc[i, 1] = cur_start_time.hour * 60 + int(cur_start_time.minute)
-        cur_end_time = datetime.datetime.strptime(df.iloc[i, 3], '%H:%M:%S')
+        cur_end_time = datetime.datetime.strptime(df.iloc[i, 3], '%Y-%m-%d %H:%M:%S')
         if cur_end_time.hour < 5:
             df.iloc[i, 3] = (24 + cur_end_time.hour) * 60 + cur_end_time.minute
         else:
@@ -124,132 +124,133 @@ def data_inference(date, station, hour):
             cur_record[60 + 80 + 52 + cur_end_station] = 1
             record_list.append(cur_record)
 
-            start_stn = 0
-            end_stn = 0
-            midway_time_list = []
-            if cur_start_station in range(0, 3) and cur_end_station in range(0, 3):
-                stn_start_temp = df.iloc[i, 0]
-                slash = stn_start_temp.index('&')
-                start_stn = int(stn_start_temp[slash + 3:])
-                stn_end_temp = df.iloc[i, 2]
-                slash = stn_end_temp.index('&')
-                end_stn = int(stn_end_temp[slash + 3:])
-                line = 'EW'
-                midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
+            if isTest:
+                start_stn = 0
+                end_stn = 0
+                midway_time_list = []
+                if cur_start_station in range(0, 3) and cur_end_station in range(0, 3):
+                    stn_start_temp = df.iloc[i, 0]
+                    slash = stn_start_temp.index('&')
+                    start_stn = int(stn_start_temp[slash + 3:])
+                    stn_end_temp = df.iloc[i, 2]
+                    slash = stn_end_temp.index('&')
+                    end_stn = int(stn_end_temp[slash + 3:])
+                    line = 'EW'
+                    midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
 
-            if cur_start_station in range(0, 3) and cur_end_station in range(3, 29):
-                stn_start_temp = df.iloc[i, 0]
-                slash = stn_start_temp.index('&')
-                start_stn = int(stn_start_temp[slash + 3:])
-                stn_end_temp = df.iloc[i, 2]
-                end_stn = int(stn_end_temp[2:])
-                line = 'EW'
-                midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
+                if cur_start_station in range(0, 3) and cur_end_station in range(3, 29):
+                    stn_start_temp = df.iloc[i, 0]
+                    slash = stn_start_temp.index('&')
+                    start_stn = int(stn_start_temp[slash + 3:])
+                    stn_end_temp = df.iloc[i, 2]
+                    end_stn = int(stn_end_temp[2:])
+                    line = 'EW'
+                    midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
 
-            if cur_start_station in range(0, 3) and cur_end_station in range(29, 52):
-                stn_start_temp = df.iloc[i, 0]
-                slash = stn_start_temp.index('&')
-                start_stn = int(stn_start_temp[2:slash])
-                stn_end_temp = df.iloc[i, 2]
-                end_stn = int(stn_end_temp[2:])
-                line = 'NS'
-                midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
+                if cur_start_station in range(0, 3) and cur_end_station in range(29, 52):
+                    stn_start_temp = df.iloc[i, 0]
+                    slash = stn_start_temp.index('&')
+                    start_stn = int(stn_start_temp[2:slash])
+                    stn_end_temp = df.iloc[i, 2]
+                    end_stn = int(stn_end_temp[2:])
+                    line = 'NS'
+                    midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
 
-            if cur_start_station in range(3, 29) and cur_end_station in range(0, 3):
-                stn_start_temp = df.iloc[i, 0]
-                start_stn = int(stn_start_temp[2:])
-                stn_end_temp = df.iloc[i, 2]
-                slash = stn_end_temp.index('&')
-                end_stn = int(stn_end_temp[slash + 3:])
-                line = 'EW'
-                midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
+                if cur_start_station in range(3, 29) and cur_end_station in range(0, 3):
+                    stn_start_temp = df.iloc[i, 0]
+                    start_stn = int(stn_start_temp[2:])
+                    stn_end_temp = df.iloc[i, 2]
+                    slash = stn_end_temp.index('&')
+                    end_stn = int(stn_end_temp[slash + 3:])
+                    line = 'EW'
+                    midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
 
-            if cur_start_station in range(29, 52) and cur_end_station in range(0, 3):
-                stn_start_temp = df.iloc[i, 0]
-                start_stn = int(stn_start_temp[2:])
-                stn_end_temp = df.iloc[i, 2]
-                slash = stn_end_temp.index('&')
-                end_stn = int(stn_end_temp[2:slash])
-                line = 'NS'
-                midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
+                if cur_start_station in range(29, 52) and cur_end_station in range(0, 3):
+                    stn_start_temp = df.iloc[i, 0]
+                    start_stn = int(stn_start_temp[2:])
+                    stn_end_temp = df.iloc[i, 2]
+                    slash = stn_end_temp.index('&')
+                    end_stn = int(stn_end_temp[2:slash])
+                    line = 'NS'
+                    midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
 
-            if cur_start_station in range(3, 29) and cur_end_station in range(3, 29):
-                stn_start_temp = df.iloc[i, 0]
-                start_stn = int(stn_start_temp[2:])
-                stn_end_temp = df.iloc[i, 2]
-                end_stn = int(stn_end_temp[2:])
-                line = 'EW'
-                midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
+                if cur_start_station in range(3, 29) and cur_end_station in range(3, 29):
+                    stn_start_temp = df.iloc[i, 0]
+                    start_stn = int(stn_start_temp[2:])
+                    stn_end_temp = df.iloc[i, 2]
+                    end_stn = int(stn_end_temp[2:])
+                    line = 'EW'
+                    midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
 
-            if cur_start_station in range(29, 52) and cur_end_station in range(29, 52):
-                stn_start_temp = df.iloc[i, 0]
-                start_stn = int(stn_start_temp[2:])
-                stn_end_temp = df.iloc[i, 2]
-                end_stn = int(stn_end_temp[2:])
-                line = 'NS'
-                midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
+                if cur_start_station in range(29, 52) and cur_end_station in range(29, 52):
+                    stn_start_temp = df.iloc[i, 0]
+                    start_stn = int(stn_start_temp[2:])
+                    stn_end_temp = df.iloc[i, 2]
+                    end_stn = int(stn_end_temp[2:])
+                    line = 'NS'
+                    midway_time_list, _ = get_midway_time(line, start_stn, end_stn, rel_end_time)
 
-            if cur_start_station in range(3, 29) and cur_end_station in range(29, 52):
-                stn_start_temp = df.iloc[i, 0]
-                start_stn = int(stn_start_temp[2:])
-                stn_end_temp = df.iloc[i, 2]
-                end_stn = int(stn_end_temp[2:])
-                trans_stn = trans_stn_array[cur_start_station][cur_end_station]
-                slash = trans_stn.index('&')
-                line = 'NS'
-                sel_trans_stn = int(trans_stn[2:slash])
-                midway_time_list, new_rel_end_time = get_midway_time(line, sel_trans_stn, end_stn, rel_end_time)
-                line = 'EW'
-                sel_trans_stn = int(trans_stn[slash + 3:])
-                midway_time_list2, _ = get_midway_time(line, start_stn, sel_trans_stn, new_rel_end_time)
-                midway_time_list.extend(midway_time_list2)
+                if cur_start_station in range(3, 29) and cur_end_station in range(29, 52):
+                    stn_start_temp = df.iloc[i, 0]
+                    start_stn = int(stn_start_temp[2:])
+                    stn_end_temp = df.iloc[i, 2]
+                    end_stn = int(stn_end_temp[2:])
+                    trans_stn = trans_stn_array[cur_start_station][cur_end_station]
+                    slash = trans_stn.index('&')
+                    line = 'NS'
+                    sel_trans_stn = int(trans_stn[2:slash])
+                    midway_time_list, new_rel_end_time = get_midway_time(line, sel_trans_stn, end_stn, rel_end_time)
+                    line = 'EW'
+                    sel_trans_stn = int(trans_stn[slash + 3:])
+                    midway_time_list2, _ = get_midway_time(line, start_stn, sel_trans_stn, new_rel_end_time)
+                    midway_time_list.extend(midway_time_list2)
 
-            if cur_start_station in range(29, 52) and cur_end_station in range(3, 29):
-                stn_start_temp = df.iloc[i, 0]
-                start_stn = int(stn_start_temp[2:])
-                stn_end_temp = df.iloc[i, 2]
-                end_stn = int(stn_end_temp[2:])
-                trans_stn = trans_stn_array[cur_start_station][cur_end_station]
-                slash = trans_stn.index('&')
-                line = 'EW'
-                sel_trans_stn = int(trans_stn[slash + 3:])
-                midway_time_list, new_rel_end_time = get_midway_time(line, sel_trans_stn, end_stn, rel_end_time)
-                line = 'NS'
-                sel_trans_stn = int(trans_stn[2:slash])
-                midway_time_list2, _ = get_midway_time(line, start_stn, sel_trans_stn, new_rel_end_time)
-                midway_time_list.extend(midway_time_list2)
+                if cur_start_station in range(29, 52) and cur_end_station in range(3, 29):
+                    stn_start_temp = df.iloc[i, 0]
+                    start_stn = int(stn_start_temp[2:])
+                    stn_end_temp = df.iloc[i, 2]
+                    end_stn = int(stn_end_temp[2:])
+                    trans_stn = trans_stn_array[cur_start_station][cur_end_station]
+                    slash = trans_stn.index('&')
+                    line = 'EW'
+                    sel_trans_stn = int(trans_stn[slash + 3:])
+                    midway_time_list, new_rel_end_time = get_midway_time(line, sel_trans_stn, end_stn, rel_end_time)
+                    line = 'NS'
+                    sel_trans_stn = int(trans_stn[2:slash])
+                    midway_time_list2, _ = get_midway_time(line, start_stn, sel_trans_stn, new_rel_end_time)
+                    midway_time_list.extend(midway_time_list2)
 
-            stab_time = rel_end_time
-            stab_stn_index = cur_end_station
+                stab_time = rel_end_time
+                stab_stn_index = cur_end_station
 
-            for k in range(len(midway_time_list)):
-                arv_stn_index = midway_time_list[k][0]
-                arv_rel_time = midway_time_list[k][1]
-                cur_record = [0] * (60 + 80 + 52 + 52)
-                cur_record[(start_time - hour * 60)] = 1
-                cur_record[60 + arv_rel_time - 1] = 1
-                cur_record[60 + 80 + cur_start_station] = 1
-                cur_record[60 + 80 + 52 + arv_stn_index] = 1
-                record_list.append(cur_record)
+                for k in range(len(midway_time_list)):
+                    arv_stn_index = midway_time_list[k][0]
+                    arv_rel_time = midway_time_list[k][1]
+                    cur_record = [0] * (60 + 80 + 52 + 52)
+                    cur_record[(start_time - hour * 60)] = 1
+                    cur_record[60 + arv_rel_time - 1] = 1
+                    cur_record[60 + 80 + cur_start_station] = 1
+                    cur_record[60 + 80 + 52 + arv_stn_index] = 1
+                    record_list.append(cur_record)
 
-                for u in range(arv_rel_time + 1, stab_time):
+                    for u in range(arv_rel_time + 1, stab_time):
+                        cur_record = [0] * (60 + 80 + 52 + 52)
+                        cur_record[(start_time - hour * 60)] = 1
+                        cur_record[60 + u - 1] = 1
+                        cur_record[60 + 80 + cur_start_station] = 1
+                        cur_record[60 + 80 + 52 + stab_stn_index] = 1
+                        record_list.append(cur_record)
+
+                    stab_time = arv_rel_time
+                    stab_stn_index = arv_stn_index
+
+                for u in range(1, stab_time):
                     cur_record = [0] * (60 + 80 + 52 + 52)
                     cur_record[(start_time - hour * 60)] = 1
                     cur_record[60 + u - 1] = 1
                     cur_record[60 + 80 + cur_start_station] = 1
-                    cur_record[60 + 80 + 52 + stab_stn_index] = 1
+                    cur_record[60 + 80 + 52 + cur_start_station] = 1
                     record_list.append(cur_record)
-
-                stab_time = arv_rel_time
-                stab_stn_index = arv_stn_index
-
-            for u in range(1, stab_time):
-                cur_record = [0] * (60 + 80 + 52 + 52)
-                cur_record[(start_time - hour * 60)] = 1
-                cur_record[60 + u - 1] = 1
-                cur_record[60 + 80 + cur_start_station] = 1
-                cur_record[60 + 80 + 52 + cur_start_station] = 1
-                record_list.append(cur_record)
 
     record_list=shuffle(record_list)
     records = np.array(record_list)
@@ -258,9 +259,9 @@ def data_inference(date, station, hour):
     return x_list, y_list
 
 
-if __name__ == '__main__':
-    argv = sys.argv
-    date = argv[1]
-    station = argv[2]
-    hour = int(argv[3])
-    data_inference(date, station, hour)
+# if __name__ == '__main__':
+#     argv = sys.argv
+#     date = argv[1]
+#     station = argv[2]
+#     hour = int(argv[3])
+#     data_inference(date, station, hour)
