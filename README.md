@@ -29,7 +29,7 @@ We obtain the transition probabilities from the trained neural network model, an
 
 #### 5. [MA/Lasso/LR]_estimation.py
 
-For performance comparison, we implement three alternatives, including MA (Moving Average), Lasso, and LR (Logistic Regression) based approaches) as baselines. The parameters are the same as above, and thus the command format is `python3 [MA/Lasso/LR]_estimation.py [hour of start time] [duration in hours] [testing_date]`.
+For performance comparison, we implement MA (Moving Average), Lasso, and LR (Logistic Regression) based approaches as baselines. The parameters are the same as above, and thus the command format is `python3 [MA/Lasso/LR]_estimation.py [hour of start time] [duration in hours] [testing_date]`.
 
 #### 6. get_travel_time.py
 
